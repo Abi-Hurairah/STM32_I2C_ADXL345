@@ -12,7 +12,7 @@ typedef enum {
 	STATE_ERROR
 } I2C_State_t;
 
-volatile I2C_State_t currentState = I2C_IDLE;
+extern volatile I2C_State_t currentState;
 
 void TimerStart();
 uint8_t I2C_init(void);

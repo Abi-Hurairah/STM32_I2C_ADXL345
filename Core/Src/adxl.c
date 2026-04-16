@@ -12,17 +12,34 @@
 #include "stm32f4xx_ll_dma.h"
 #include "stm32f4xx_ll_gpio.h"
 
+volatile I2C_State_t currentState = STATE_IDLE;
+
+volatile int16_t x_raw;
+volatile int16_t y_raw;
+volatile int16_t z_raw;
+
 void I2C1_EV_IRQHandler(void){
 	// read SR1 register to capture snapshot of the hardware
 	uint32_t sr1 = I2C1->SR1;
 
-	switch (currentState){
+	switch (currentState) {
 		case STATE_START_SENT:
 			if (sr1 & (1U << 0)){
 				// write the address to SDA bus via data register
 				I2C1 -> DR = (0x53 << 1);
 				currentState = STATE_ADDR_SENT;
 			}
+			// TODO: add cases for other states
+			ADXL345_pwr();
+			while(1){
+				TimerStart();
+				while(!(SysTick -> CTRL & (1U << 16))){
+
+				}
+				ADXL345_read();
+			}
+
+
 	}
 }
 
@@ -274,6 +291,7 @@ uint8_t ADXL345_read(){
   (void)I2C1 -> SR1;
   (void)I2C1 -> SR2;
 
+  // TODO: troubleshoot error when reading beyond the first byte
   // first byte
   TimerStart();
   while(!(I2C1 -> SR1 & (1U << 6))){
@@ -335,9 +353,9 @@ uint8_t ADXL345_read(){
   I2C1 -> CR1 |= (1U << 10);
 
   // Combine the data
-  volatile int16_t x_raw = (int16_t)((data_buffer[1] << 8) | (data_buffer[0]));
-  volatile int16_t y_raw = (int16_t)((data_buffer[3] << 8) | (data_buffer[2]));
-  volatile int16_t z_raw = (int16_t)((data_buffer[5] << 8) | (data_buffer[4]));
+  x_raw = (int16_t)((data_buffer[1] << 8) | (data_buffer[0]));
+  y_raw = (int16_t)((data_buffer[3] << 8) | (data_buffer[2]));
+  z_raw = (int16_t)((data_buffer[5] << 8) | (data_buffer[4]));
 
   return 0;
 }

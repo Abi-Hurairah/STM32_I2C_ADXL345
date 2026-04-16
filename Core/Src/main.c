@@ -79,11 +79,13 @@ int main(void)
   NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),15, 0));
 
   /* USER CODE BEGIN Init */
+  __enable_irq();
+
   // Set interrupts for event driven programming
   NVIC_EnableIRQ(I2C1_EV_IRQn);
   NVIC_EnableIRQ(I2C1_ER_IRQn);
 
-  I2C1->CR2 |= (1U << 9);
+
 
   // Error gets higher priority than events
   NVIC_SetPriority(I2C1_EV_IRQn, 1);
@@ -95,9 +97,10 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
   I2C_init();
-  ADXL345_pwr();
-  //ADXL345_read();
-
+  I2C1->CR2 |= (1U << 9);
+  if (currentState == STATE_IDLE){
+	ADXL345_StartRead();
+  }
 
   /* USER CODE END SysInit */
 
@@ -110,15 +113,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	if (currentState == I2C_IDLE){
-		ADXL345_StartRead();
-	}
-    /* USER CODE END WHILE */
-	TimerStart();
-	while(!(SysTick -> CTRL & (1U << 16))){
 
-	}
-	ADXL345_read();
+    /* USER CODE END WHILE */
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
