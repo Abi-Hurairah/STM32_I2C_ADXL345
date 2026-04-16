@@ -12,6 +12,20 @@
 #include "stm32f4xx_ll_dma.h"
 #include "stm32f4xx_ll_gpio.h"
 
+void I2C1_EV_IRQHandler(void){
+	// read SR1 register to capture snapshot of the hardware
+	uint32_t sr1 = I2C1->SR1;
+
+	switch (currentState){
+		case STATE_START_SENT:
+			if (sr1 & (1U << 0)){
+				// write the address to SDA bus via data register
+				I2C1 -> DR = (0x53 << 1);
+				currentState = STATE_ADDR_SENT;
+			}
+	}
+}
+
 void TimerStart(){
 	// Set to 500 milisecond
 	SysTick->LOAD = 16000 * 500 - 1; // cycles per MS = 16000
@@ -57,31 +71,15 @@ uint8_t I2C_init(void){
   I2C1 -> TRISE = 17U;
 
   // Enable peripheral and set start bit to 1
-  // The hardware enters Controller (Master) Mode
   I2C1 -> CR1 |= 1U;
-  I2C1 -> CR1 |= (1U << 8);
 
-  TimerStart();
-  // Wait for SB flag
-  while(!(I2C1->SR1 & (1U << 0))) {
-	  if((SysTick -> CTRL & (1U << 16))){
-		  return 1; //Error: I2C Timeout Occurred
-	  }
-	  // Wait until SB is 1
-  }
-
-  // write the address to SDA bus via data register
-  I2C1 -> DR = (0x53 << 1);
-
-
-  // Implements 500 ms wait time before time out
-  TimerStart();
-  while(!(I2C1 -> SR1 & (1U << 1))){
-	  if((SysTick -> CTRL & (1U << 16))){
-		  return 1; // Error: I2C Timeout Occurred
-	  }
-  }
   return 0;
+}
+
+void ADXL345_StartRead(){
+	// The hardware enters Controller (Master) Mode
+	I2C1 -> CR1 |= (1U << 8);
+	currentState = STATE_START_SENT;
 }
 
 uint8_t ADXL345_pwr(void){
