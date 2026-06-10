@@ -88,8 +88,6 @@ int main(void)
   /* USER CODE BEGIN SysInit */
   I2C_init();
   ADXL345_pwr();
-  //ADXL345_read();
-
 
   /* USER CODE END SysInit */
 

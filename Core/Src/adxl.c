@@ -12,6 +12,10 @@
 #include "stm32f4xx_ll_dma.h"
 #include "stm32f4xx_ll_gpio.h"
 
+volatile int16_t x_raw;
+volatile int16_t y_raw;
+volatile int16_t z_raw;
+
 void TimerStart(){
 	// Set to 500 milisecond
 	SysTick->LOAD = 16000 * 500 - 1; // cycles per MS = 16000
@@ -33,18 +37,20 @@ uint8_t I2C_init(void){
   I2C1->CR1 |= (1U << 15);  // Set SWRST bit
   I2C1->CR1 &= ~(1U << 15); // Clear SWRST bit
 
-  // Setup for PB6 as SCL and PB7 as SDA
-  GPIOB -> MODER &= ~((3U << 12) | (3U << 14));
-  GPIOB -> MODER |= (2U << 12) | (2U << 14);
+  // Setup for PB8 as SCL and PB9 as SDA
+  GPIOB -> MODER &= ~((3U << 16) | (3U << 18)); // Clear MODER8 and MODER9
+  GPIOB -> MODER |=  ((2U << 16) | (2U << 18)); // Set both to Alternate Function (10)
 
-  GPIOB -> AFR[0] &= ~(15U << 24);
-  GPIOB -> AFR[0] |= (4U << 24);
+  // Clear and set AFR[1] (pins 8 to 15)
+  GPIOB -> AFR[1] &= ~((15U << 0) | (15U << 4)); // Clear AFSR8 and AFSR9
+  GPIOB -> AFR[1] |=  ((4U << 0)  | (4U << 4));  // Set both to AF4 (0100)
 
-  GPIOB -> AFR[0] &= ~(15U << 28);
-  GPIOB -> AFR[0] |= (4U << 28);
+  // Configure Output Type to Open Drain
+  GPIOB -> OTYPER |= (1U << 8) | (1U << 9);
 
-  // set to open drain
-  GPIOB -> OTYPER |= (1U << 6) | (1U << 7);
+  // Configure Pull-ups
+  GPIOB -> PUPDR &= ~((3U << 16) | (3U << 18));
+  GPIOB -> PUPDR |=  ((1U << 16) | (1U << 18));
 
   // I2C Setup
   // Frequency bit for 16 MHz
@@ -337,9 +343,9 @@ uint8_t ADXL345_read(){
   I2C1 -> CR1 |= (1U << 10);
 
   // Combine the data
-  volatile int16_t x_raw = (int16_t)((data_buffer[1] << 8) | (data_buffer[0]));
-  volatile int16_t y_raw = (int16_t)((data_buffer[3] << 8) | (data_buffer[2]));
-  volatile int16_t z_raw = (int16_t)((data_buffer[5] << 8) | (data_buffer[4]));
+  x_raw = (int16_t)((data_buffer[1] << 8) | (data_buffer[0]));
+  y_raw = (int16_t)((data_buffer[3] << 8) | (data_buffer[2]));
+  z_raw = (int16_t)((data_buffer[5] << 8) | (data_buffer[4]));
 
   return 0;
 }
