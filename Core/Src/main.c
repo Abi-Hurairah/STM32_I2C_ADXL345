@@ -103,7 +103,7 @@ int main(void)
     /* USER CODE END WHILE */
 	TimerStart();
 	while(!(SysTick -> CTRL & (1U << 16))){
-
+		// 500 ms interval between readings
 	}
 	ADXL345_read();
     /* USER CODE BEGIN 3 */

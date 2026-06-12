@@ -76,113 +76,24 @@ uint8_t I2C_init(void){
 	  // Wait until SB is 1
   }
 
-  // write the address to SDA bus via data register
-  I2C1 -> DR = (0x53 << 1);
 
-
-  // Implements 500 ms wait time before time out
-  TimerStart();
-  while(!(I2C1 -> SR1 & (1U << 1))){
-	  if((SysTick -> CTRL & (1U << 16))){
-		  return 1; // Error: I2C Timeout Occurred
-	  }
-  }
   return 0;
 }
 
 uint8_t ADXL345_pwr(void){
-  // Perform reads on the status registers to reset ADDR bit
-  (void)I2C1 -> SR1;
-  (void)I2C1 -> SR2;
-
-  I2C1 -> DR = (0x2D);
-
-  // Set delay for sending the bits
-  // Makes sure data register is empty before proceeding
-  while (!(I2C1-> SR1 & (1U << 7))){
-
-  }
-
-  // waiting for byte transfer finished state
-  TimerStart();
-  while (!(I2C1-> SR1 & (1U << 2))){
-	  if((SysTick -> CTRL & (1U << 16))){
-		  return 1; // Error: I2C Timeout Occurred
-	  }
-  }
-
-  // Repeated start to change to receiver mode
-  I2C1 -> CR1 |= (1U << 8);
-
-  // Wait for SB flag
-  while(!(I2C1->SR1 & (1U << 0))) {
-	  // Wait until SB is 1
-  }
-
-  I2C1 -> DR = (0x53 << 1) | 1U;
-
-  // check for ADDR register
-  TimerStart();
-  while(!(I2C1 -> SR1 & (1U << 1))){
-	  if((SysTick -> CTRL & (1U << 16))){
-		  return 1; // Error: I2C Timeout Occurred
-	  }
-  }
-
-  // Set NACK to stop the sensor from sending information
-  I2C1 -> CR1 &= ~(1U << 10);
-
-  // Perform reads on the status registers to reset ADDR bit
-  (void)I2C1 -> SR1;
-  (void)I2C1 -> SR2;
-
-
-  I2C1 -> CR1 |= (1U << 9); // prepare stop
-
-  // Check if the data register is not empty
-  TimerStart();
-  while(!(I2C1 -> SR1 & (1U << 6))){
-	  if((SysTick -> CTRL & (1U << 16))){
-		  return 1; // Error: I2C Timeout Occurred
-	  }
-  }
-
-  uint8_t devpwr = I2C1 -> DR;
-
-  // Set ACK to 1 again to return to original state
-  I2C1 -> CR1 |= (1U << 10);
-  return 0;
-}
-
-uint8_t ADXL345_read(){
-  // Now we get to powerctl and control the ADXL345
-
-  // Start again, since we issued a stop previously
-  I2C1 -> CR1 |= (1U << 8);
-
-  TimerStart();
-  // Wait for SB flag
-  while(!(I2C1->SR1 & (1U << 0))) {
-	  if((SysTick -> CTRL & (1U << 16))){
-		  return 1; // Error: I2C Timeout Occurred
-	  }
-	  // Wait until SB is 1
-  }
-
+  // write the address to SDA bus via data register
   I2C1 -> DR = (0x53 << 1);
 
   // Implements 500 ms wait time before time out
   TimerStart();
   while(!(I2C1 -> SR1 & (1U << 1))){
 	  if((SysTick -> CTRL & (1U << 16))){
-		  return 1; // // Error: I2C Timeout Occurred
+		  return 1; // Error: I2C Timeout Occurred
 	  }
   }
-
-  // Perform reads on the status registers to clear ADDR bit
+  // Perform reads on the status registers to reset ADDR bit
   (void)I2C1 -> SR1;
   (void)I2C1 -> SR2;
-
 
   I2C1 -> DR = (0x2D);
 
@@ -210,9 +121,11 @@ uint8_t ADXL345_read(){
   }
 
   I2C1 -> CR1 |= (1U << 9); // prepare stop
+  return 0;
+}
 
+uint8_t ADXL345_read(){
   // Start reading the the ADXL345 data registers
-
   I2C1 -> CR1 |= (1U << 8);
 
   TimerStart();
@@ -277,7 +190,6 @@ uint8_t ADXL345_read(){
   }
 
   // ACK is still enabled here because we want 6 bytes in total
-
   // Perform reads on the status registers to reset ADDR bit
   (void)I2C1 -> SR1;
   (void)I2C1 -> SR2;
@@ -319,6 +231,10 @@ uint8_t ADXL345_read(){
   }
   data_buffer[3] = I2C1 -> DR;
 
+  // NACK and STOP must be set before reading the second-to-last byte to terminate the sequence correctly
+  I2C1 -> CR1 &= ~(1U << 10);
+  I2C1 -> CR1 |= (1U << 9);
+
   // fifth byte
   TimerStart();
   while(!(I2C1 -> SR1 & (1U << 6))){
@@ -326,8 +242,7 @@ uint8_t ADXL345_read(){
 		  return 1; // Error: I2C Timeout Occurred
 	  }
   }
-  I2C1 -> CR1 &= ~(1U << 10); // NACK and STOP must be set before reading the second-to-last byte to terminate the sequence correctly
-  I2C1 -> CR1 |= (1U << 9);
+
   data_buffer[4] = I2C1 -> DR;
 
   // sixth byte
